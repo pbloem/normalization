@@ -8,7 +8,7 @@ from matplotlib.collections import PatchCollection
 from matplotlib.axes import Axes
 import os, errno, random, time, string
 
-import torch
+import torch, torch.cuda
 from torch import nn
 from torch import FloatTensor
 from torch.autograd import Variable
@@ -387,6 +387,76 @@ def count_params(model):
     return sum
 
 
+class Det(torch.autograd.Function):
+    """
+    Matrix determinant. Input should be a square matrix
+    """
 
+    @staticmethod
+    def forward(ctx, x):
+        output = torch.potrf(x).diag().prod()**2
+        output = torch.Tensor([output]).cuda() # remove .cuda() if you only use cpu
+        ctx.save_for_backward(x, output)
+        return output
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        x, output = ctx.saved_variables
+        grad_input = None
+
+        if ctx.needs_input_grad[0]:
+            grad_input = grad_output * output * x.inverse().t()
+
+        return grad_input
+
+
+class LogDetDiag(torch.autograd.Function):
+    """
+    Determinant of a diagonal matrix. Input is the diagonal of the matrix
+    """
+
+    @staticmethod
+    def forward(ctx, diagonal):
+
+        logprod = torch.log(diagonal).sum()
+
+        output = torch.Tensor([logprod])
+        if diagonal.is_cuda:
+            output = output.cuda()
+
+        ctx.save_for_backward(diagonal, output)
+        return output
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        diagonal, output = ctx.saved_variables
+        grad_input = None
+
+        if ctx.needs_input_grad[0]:
+            grad_input = grad_output * ( 1.0 / diagonal)
+
+        return grad_input
+
+class DetCuda(torch.autograd.Function):
+    """
+    Matrix determinant. Input should be a square matrix
+    """
+
+    @staticmethod
+    def forward(ctx, x):
+        output = torch.potrf(x).diag().prod()**2
+        output = torch.Tensor([output])
+        ctx.save_for_backward(x, output)
+        return output
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        x, output = ctx.saved_variables
+        grad_input = None
+
+        if ctx.needs_input_grad[0]:
+            grad_input = grad_output * output * x.inverse().t()
+
+        return grad_input
 
 
