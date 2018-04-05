@@ -234,11 +234,11 @@ def go(options):
         [transforms.ToTensor(),
          transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
-    train = torchvision.datasets.CIFAR10(root='./data', train=True, download=True, transform=normalize)
+    train = torchvision.datasets.CIFAR10(root=options.data, train=True, download=True, transform=normalize)
 
     trainloader = torch.utils.data.DataLoader(train, batch_size=BATCH_SIZE, shuffle=True, num_workers=2)
 
-    test = torchvision.datasets.CIFAR10(root='./data', train=False, download=True, transform=normalize)
+    test = torchvision.datasets.CIFAR10(root=options.data, train=False, download=True, transform=normalize)
 
     testloader = torch.utils.data.DataLoader(test, batch_size=BATCH_SIZE, shuffle=False, num_workers=2)
 
@@ -341,6 +341,11 @@ if __name__ == "__main__":
                         dest="epochs",
                         help="The number of epochs.",
                         default=75, type=int)
+
+    parser.add_argument("-d", "--data",
+                        dest="data",
+                        help="Data directory",
+                        default='./data', type=str)
 
     parser.add_argument("-c", "--cuda", dest="cuda",
                         help="Whether to use cuda.",
