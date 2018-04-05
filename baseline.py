@@ -321,6 +321,7 @@ def go(options):
         plt.plot(accuracies, label=modelname, marker = next(marker))
         results[modelname] = list(accuracies)
 
+    plt.title('lambda ' + options.lambd)
     plt.legend()
     plt.savefig('loss-curves.pdf')
 
