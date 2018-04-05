@@ -83,7 +83,7 @@ class BNSigmoid(nn.Sequential):
 class SigmoidBN(nn.Sequential):
 
     def __init__(self, num_features):
-        super(BNSigmoid, self).__init__()
+        super(SigmoidBN, self).__init__()
         self.norm = nn.BatchNorm2d(num_features)
         self.sigmoid = nn.Sigmoid()
 
