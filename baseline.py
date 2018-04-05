@@ -90,7 +90,7 @@ class SigmoidBN(nn.Sequential):
     def forward(self, x):
         return self.norm(self.sigmoid(x))
 
-def load_model(name):
+def load_model(name, big=True):
 
     activation = None
 
@@ -113,32 +113,54 @@ def load_model(name):
     else:
         raise Exception('Model "{}" not recognized.'.format(name))
 
-    model = Sequential(
-        nn.Conv2d(in_channels=3, out_channels=16, kernel_size=5, stride=1, padding=2),  # 0
-        activation(16),
-        nn.Conv2d(in_channels=16, out_channels=16, kernel_size=5, stride=1, padding=2), # 2
-        activation(16),
-        nn.Conv2d(in_channels=16, out_channels=16, kernel_size=5, stride=1, padding=2), # 4
-        activation(16),                                                                   # 5
-        nn.MaxPool2d(stride=2, kernel_size=2),                                          # 6
-        nn.Conv2d(in_channels=16, out_channels=32, kernel_size=5, stride=1, padding=2), # 7
-        activation(32),                                                                   # 8
-        nn.Conv2d(in_channels=32, out_channels=32, kernel_size=5, stride=1, padding=2), # 9
-        activation(32),
-        nn.Conv2d(in_channels=32, out_channels=32, kernel_size=5, stride=1, padding=2), # 11
-        activation(32),
-        nn.MaxPool2d(stride=2, kernel_size=2),
-        nn.Conv2d(in_channels=32, out_channels=64, kernel_size=5, stride=1, padding=2), # 14
-        activation(64),
-        nn.Conv2d(in_channels=64, out_channels=64, kernel_size=5, stride=1, padding=2), # 16
-        activation(64),
-        nn.Conv2d(in_channels=64, out_channels=64, kernel_size=5, stride=1, padding=2), # 18
-        activation(64),
-        nn.MaxPool2d(stride=2, kernel_size=2),
-        util.Flatten(),
-        nn.Linear(4 * 4 * 64, 10), # 22
-        nn.Softmax()
-    )
+    if big:
+        model = Sequential(
+            nn.Conv2d(in_channels=3, out_channels=16, kernel_size=5, stride=1, padding=2),  # 0
+            activation(16),
+            nn.Conv2d(in_channels=16, out_channels=16, kernel_size=5, stride=1, padding=2), # 2
+            activation(16),
+            nn.Conv2d(in_channels=16, out_channels=16, kernel_size=5, stride=1, padding=2), # 4
+            activation(16),                                                                   # 5
+            nn.MaxPool2d(stride=2, kernel_size=2),                                          # 6
+            nn.Conv2d(in_channels=16, out_channels=32, kernel_size=5, stride=1, padding=2), # 7
+            activation(32),                                                                   # 8
+            nn.Conv2d(in_channels=32, out_channels=32, kernel_size=5, stride=1, padding=2), # 9
+            activation(32),
+            nn.Conv2d(in_channels=32, out_channels=32, kernel_size=5, stride=1, padding=2), # 11
+            activation(32),
+            nn.MaxPool2d(stride=2, kernel_size=2),
+            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=5, stride=1, padding=2), # 14
+            activation(64),
+            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=5, stride=1, padding=2), # 16
+            activation(64),
+            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=5, stride=1, padding=2), # 18
+            activation(64),
+            nn.MaxPool2d(stride=2, kernel_size=2),
+            util.Flatten(),
+            nn.Linear(4 * 4 * 64, 10), # 22
+            nn.Softmax()
+        )
+    else:
+        model = Sequential(
+            nn.Conv2d(in_channels=3, out_channels=8, kernel_size=3, stride=1, padding=2),  # 0
+            activation(8),
+            nn.Conv2d(in_channels=8, out_channels=8, kernel_size=3, stride=1, padding=2),  # 2
+            activation(8),
+            nn.MaxPool2d(stride=4, kernel_size=4),  # 6
+            nn.Conv2d(in_channels=8, out_channels=16, kernel_size=3, stride=1, padding=2),  # 7
+            activation(16),  # 8
+            nn.Conv2d(in_channels=16, out_channels=16, kernel_size=3, stride=1, padding=2),  # 9
+            activation(16),
+            nn.MaxPool2d(stride=2, kernel_size=2),
+            nn.Conv2d(in_channels=16, out_channels=32, kernel_size=3, stride=1, padding=2),  # 14
+            activation(32),
+            nn.Conv2d(in_channels=32, out_channels=32, kernel_size=3, stride=1, padding=2),  # 16
+            activation(32),
+            nn.MaxPool2d(stride=2, kernel_size=2),
+            util.Flatten(),
+            nn.Linear(5 * 5 * 32, 10),  # 22
+            nn.Softmax()
+        )
 
     return model
 
@@ -226,8 +248,9 @@ def go(options):
     for modelname in ['relu', 'sigmoid', 'relu-lambda', 'sigmoid-lambda', 'bn-relu', 'relu-bn', 'bn-sigmoid', 'sigmoid-bn']:
 
         print('testing model ', modelname)
+        model = load_model(modelname, False)
+        print(util.count_params(model), ' parameters')
 
-        model = load_model(modelname)
         if CUDA:
             model.cuda()
 

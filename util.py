@@ -386,7 +386,6 @@ def count_params(model):
 
     return sum
 
-
 class Det(torch.autograd.Function):
     """
     Matrix determinant. Input should be a square matrix
