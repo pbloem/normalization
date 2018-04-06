@@ -102,6 +102,10 @@ def load_model(name, big=True):
         activation = Relu
     elif name == 'sigmoid-lambda':
         activation = Sigmoid
+    elif name == 'relu-sigloss':
+        activation = Relu
+    elif name == 'sigmoid-sigloss':
+        activation = Sigmoid
     elif name == 'bn-relu':
         activation = BNRelu
     elif name == 'relu-bn':
@@ -245,7 +249,7 @@ def go(options):
     classes = ('plane', 'car', 'bird', 'cat',
                'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
 
-    for modelname in ['relu', 'sigmoid', 'relu-lambda', 'sigmoid-lambda', 'bn-relu', 'relu-bn', 'bn-sigmoid', 'sigmoid-bn']:
+    for modelname in ['relu', 'sigmoid', 'relu-lambda', 'sigmoid-lambda', 'relu-sigloss', 'sigmoid-sigloss', 'bn-relu', 'relu-bn', 'bn-sigmoid', 'sigmoid-bn']:
 
         print('testing model ', modelname)
         model = load_model(modelname, False)
@@ -284,14 +288,18 @@ def go(options):
                     lloss = sum(loss_terms(model, inputs))
                     loss = loss + options.lambd * lloss
 
+                if 'lambda' in modelname:
+                    lloss = sum([nn.functional.sigmoid(l) for l in loss_terms(model, inputs)])
+                    loss = loss + lloss
+
                 loss.backward()
                 optimizer.step()
 
                 # w.add_scalar('normalization/mloss', mloss.data[0], i * BATCH_SIZE + e)
                 # w.add_scalar('normalization/lloss', lloss.data[0], i * BATCH_SIZE + e)
 
-                # if i > 2:
-                #     break
+                if i > 2:
+                    break
 
             correct = 0
             total = 0
@@ -311,9 +319,9 @@ def go(options):
 
                 total += labels.size(0)
                 correct += (predicted == labels.data).sum()
-                #
-                # if i > 2:
-                #     break
+
+                if i > 2:
+                    break
 
             accuracies.append(correct / total)
 
