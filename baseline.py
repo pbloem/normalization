@@ -171,7 +171,7 @@ def loss_terms(model, input):
     for i, module in enumerate(list(model.modules())[1:]):
         hidden = module(hidden)
 
-        if isinstance(module, nn.Conv2d):
+        if isinstance(module, nn.ReLU) or isinstance(module, nn.Sigmoid):
             ll = layer_loss(hidden)
             losses.append(ll)
 
