@@ -297,9 +297,9 @@ def go(options):
 
                 # w.add_scalar('normalization/mloss', mloss.data[0], i * BATCH_SIZE + e)
                 # w.add_scalar('normalization/lloss', lloss.data[0], i * BATCH_SIZE + e)
-
-                if i > 2:
-                    break
+                #
+                # if i > 2:
+                #     break
 
             correct = 0
             total = 0
@@ -320,8 +320,8 @@ def go(options):
                 total += labels.size(0)
                 correct += (predicted == labels.data).sum()
 
-                if i > 2:
-                    break
+                # if i > 2:
+                #     break
 
             accuracies.append(correct / total)
 
