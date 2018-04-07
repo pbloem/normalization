@@ -146,23 +146,30 @@ def load_model(name, big=True):
         )
     else:
         model = Sequential(
-            nn.Conv2d(in_channels=3, out_channels=8, kernel_size=3, stride=1, padding=2),  # 0
+            nn.Conv2d(in_channels=3, out_channels=8, kernel_size=3, stride=1, padding=1),  # 0
             activation(8),
-            nn.Conv2d(in_channels=8, out_channels=8, kernel_size=3, stride=1, padding=2),  # 2
+            nn.Conv2d(in_channels=8, out_channels=8, kernel_size=3, stride=1, padding=1),  # 2
             activation(8),
-            nn.MaxPool2d(stride=4, kernel_size=4),  # 6
-            nn.Conv2d(in_channels=8, out_channels=16, kernel_size=3, stride=1, padding=2),  # 7
+            nn.Conv2d(in_channels=8, out_channels=8, kernel_size=3, stride=1, padding=1),  # 2
+            activation(8),
+            nn.MaxPool2d(stride=2, kernel_size=2),  # 6
+            nn.Conv2d(in_channels=8, out_channels=16, kernel_size=3, stride=1, padding=1),  # 7
             activation(16),  # 8
-            nn.Conv2d(in_channels=16, out_channels=16, kernel_size=3, stride=1, padding=2),  # 9
+            nn.Conv2d(in_channels=16, out_channels=16, kernel_size=3, stride=1, padding=1),  # 9
+            activation(16),
+            nn.Conv2d(in_channels=16, out_channels=16, kernel_size=3, stride=1, padding=1),  # 9
             activation(16),
             nn.MaxPool2d(stride=2, kernel_size=2),
-            nn.Conv2d(in_channels=16, out_channels=32, kernel_size=3, stride=1, padding=2),  # 14
+            nn.Conv2d(in_channels=16, out_channels=32, kernel_size=3, stride=1, padding=1),  # 14
             activation(32),
-            nn.Conv2d(in_channels=32, out_channels=32, kernel_size=3, stride=1, padding=2),  # 16
+            nn.Conv2d(in_channels=32, out_channels=32, kernel_size=3, stride=1, padding=1),  # 16
+            activation(32),
+            nn.Conv2d(in_channels=32, out_channels=32, kernel_size=3, stride=1, padding=1),  # 16
             activation(32),
             nn.MaxPool2d(stride=2, kernel_size=2),
+            # util.Debug(lambda x: print(x.size())),
             util.Flatten(),
-            nn.Linear(5 * 5 * 32, 10),  # 22
+            nn.Linear(4 * 4 * 32, 10),  # 22
             nn.Softmax()
         )
 
@@ -249,7 +256,7 @@ def go(options):
     classes = ('plane', 'car', 'bird', 'cat',
                'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
 
-    for modelname in ['relu', 'sigmoid', 'relu-lambda', 'sigmoid-lambda', 'relu-sigloss', 'sigmoid-sigloss', 'bn-relu', 'relu-bn', 'bn-sigmoid', 'sigmoid-bn']:
+    for modelname in ['relu', 'sigmoid', 'relu-lambda', 'sigmoid-lambda', 'relu-sigloss', 'sigmoid-sigloss', 'bn-relu', 'relu-bn', 'sigmoid-bn']:
 
         print('testing model ', modelname)
         model = load_model(modelname, False)
@@ -288,8 +295,9 @@ def go(options):
                     lloss = sum(loss_terms(model, inputs))
                     loss = loss + options.lambd * lloss
 
-                if 'lambda' in modelname:
-                    lloss = sum([nn.functional.sigmoid(l) for l in loss_terms(model, inputs)])
+                if 'sigloss' in modelname:
+                    lterms = loss_terms(model, inputs)
+                    lloss = (1.0/len(lterms)) * sum([nn.functional.sigmoid(l) for l in lterms])
                     loss = loss + lloss
 
                 loss.backward()
