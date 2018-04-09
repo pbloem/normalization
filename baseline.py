@@ -298,7 +298,7 @@ def go(options):
                 if 'sigloss' in modelname:
                     lterms = loss_terms(model, inputs)
                     lloss = (1.0/len(lterms)) * sum([nn.functional.sigmoid(l) for l in lterms])
-                    loss = loss + lloss
+                    loss = loss + options.lambd * lloss
 
                 loss.backward()
                 optimizer.step()
@@ -343,6 +343,108 @@ def go(options):
 
     pickle.dump(results, open('results.pkl', 'wb'))
 
+def go_learnrate(options):
+
+    marker = itertools.cycle((',', '+', '.', 'o', '*'))
+
+    EPOCHS = options.epochs
+    BATCH_SIZE = options.batch_size
+    CUDA = options.cuda
+
+    w = SummaryWriter()
+
+    # Set up the dataset
+
+    normalize = transforms.Compose(
+        [transforms.ToTensor(),
+         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+
+    train = torchvision.datasets.CIFAR10(root=options.data, train=True, download=True, transform=normalize)
+    trainloader = torch.utils.data.DataLoader(train, batch_size=BATCH_SIZE, shuffle=True, num_workers=2)
+    test = torchvision.datasets.CIFAR10(root=options.data, train=False, download=True, transform=normalize)
+    testloader = torch.utils.data.DataLoader(test, batch_size=BATCH_SIZE, shuffle=False, num_workers=2)
+
+    classes = ('plane', 'car', 'bird', 'cat',
+               'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
+
+    for learnrate in [0.000001, 0.000005, 0.00001, 0.00005, 0.0001, 0.0005, 0.001, 0.005, 0.01, 0.05]:
+
+        print('testing learning rate ', learnrate)
+        model = load_model('relu', False)
+        print(util.count_params(model), ' parameters')
+
+        if CUDA:
+            model.cuda()
+
+        criterion = nn.CrossEntropyLoss()
+        optimizer = optim.Adam(model.parameters(), lr=learnrate)
+
+        accuracies = []
+        results = {}
+
+        for e in tqdm.trange(EPOCHS):
+            for i, data in enumerate(trainloader, 0):
+
+                # get the inputs
+                inputs, labels = data
+
+                if CUDA:
+                    inputs, labels = inputs.cuda(), labels.cuda()
+
+                # wrap them in Variable
+                inputs, labels = Variable(inputs), Variable(labels)
+
+                # zero the parameter gradients
+                optimizer.zero_grad()
+
+                # forward + backward + optimize
+                outputs = model(inputs)
+
+                loss = criterion(outputs, labels)
+
+                loss.backward()
+                optimizer.step()
+
+                # w.add_scalar('normalization/mloss', mloss.data[0], i * BATCH_SIZE + e)
+                # w.add_scalar('normalization/lloss', lloss.data[0], i * BATCH_SIZE + e)
+                #
+                # if i > 2:
+                #     break
+
+            correct = 0
+            total = 0
+            for i, data in enumerate(testloader):
+
+                inputs, labels = data
+
+                if CUDA:
+                    inputs, labels = inputs.cuda(), labels.cuda()
+
+                # wrap them in Variable
+                inputs, labels = Variable(inputs), Variable(labels)
+
+                outputs = model(inputs)
+
+                _, predicted = torch.max(outputs.data, 1)
+
+                total += labels.size(0)
+                correct += (predicted == labels.data).sum()
+
+                # if i > 2:
+                #     break
+
+            accuracies.append(correct / total)
+
+        # accuracies = np.asarray(accuracies)
+        plt.plot(accuracies, label=str(learnrate), marker = next(marker))
+        results[str(learnrate)] = list(accuracies)
+
+    plt.title('learning rates ')
+    plt.legend()
+    plt.savefig('loss-curves-lr.pdf')
+
+    pickle.dump(results, open('results-lr.pkl', 'wb'))
+
 if __name__ == "__main__":
 
     ## Parse the command line options
@@ -367,6 +469,10 @@ if __name__ == "__main__":
                         help="Whether to use cuda.",
                         action="store_true")
 
+    parser.add_argument("-L", "--test-learn-rate", dest="learn_rate",
+                        help="Run a learning rate experiment.",
+                        action="store_true")
+
     parser.add_argument("-l", "--lambd",
                         dest="lambd",
                         help="The weight of the loss terms",
@@ -375,5 +481,7 @@ if __name__ == "__main__":
     options = parser.parse_args()
 
     print('OPTIONS ', options)
-
-    go(options)
+    if(options.learn_rate):
+        go_learnrate(options)
+    else:
+        go(options)
