@@ -266,7 +266,7 @@ def go(options):
             model.cuda()
 
         criterion = nn.CrossEntropyLoss()
-        optimizer = optim.Adam(model.parameters(), lr=0.001)
+        optimizer = optim.Adam(model.parameters(), lr=options.learning_rate)
 
         accuracies = []
         results = {}
@@ -476,6 +476,11 @@ if __name__ == "__main__":
     parser.add_argument("-l", "--lambd",
                         dest="lambd",
                         help="The weight of the loss terms",
+                        default=0.0001, type=float)
+
+    parser.add_argument("-r", "--learning-rate",
+                        dest="learning_rate",
+                        help="The learning rate",
                         default=0.0001, type=float)
 
     options = parser.parse_args()
