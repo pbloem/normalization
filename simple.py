@@ -120,14 +120,14 @@ def load_model(name, size=16, hidden=32, mult=0.0001):
     model = Sequential(
         Linear(size, hidden),
         activation(32),
-        Linear(hidden, hidden),
-        activation(32),
-        Linear(hidden, hidden),
-        activation(32),
-        Linear(hidden, hidden),
-        activation(32),
-        Linear(hidden, hidden),
-        activation(32),
+        # Linear(hidden, hidden),
+        # activation(32),
+        # Linear(hidden, hidden),
+        # activation(32),
+        # Linear(hidden, hidden),
+        # activation(32),
+        # Linear(hidden, hidden),
+        # activation(32),
         # Linear(hidden, hidden),
         # activation(32),
         # Linear(hidden, hidden),
@@ -162,7 +162,7 @@ def loss_terms(model, input):
     for i, module in enumerate(list(model.modules())[1:]):
         hidden = module(hidden)
 
-        if i == 3:
+        if i == 1:
             ll = layer_loss(hidden)
             losses.append(ll)
 
@@ -177,6 +177,9 @@ def layer_loss(hidden):
 
     mean = hidden.mean(dim=0, keepdim=True)
 
+    # print(hidden)
+    # print('m', mean.data)
+
     t2 = torch.dot(hidden.view(-1), hidden.view(-1)) * 1.0 / (b - 1)
 
     if False:
@@ -190,23 +193,27 @@ def layer_loss(hidden):
 
         t1 = - torch.log(det.apply(cov)) - d
 
-    else:
+   #  else:
         # ... otherwise, we use a diagonal approximation for the determinant of the
         # covariance matrix (note that the rest of the KL divergence can be efficiently and exactly computed).
 
-        diacov = torch.bmm(hidden.view(d, 1, b), hidden.view(d, b, 1)).squeeze() * 1.0/(b-1)
+        # diacov = torch.bmm(hidden.view(d, 1, b), hidden.view(d, b, 1)).squeeze() * 1.0/(b-1)
+        #
+        # assert( diacov.size() == (d,) )
+        #
+        # # print(diacov, LogDetDiag.apply(diacov))
+        #
+        # t1 = - LogDetDiag.apply(diacov) - d
 
-        assert( diacov.size() == (d,) )
+    diacov = torch.bmm(hidden.view(d, 1, b), hidden.view(d, b, 1)).squeeze() * 1.0 / (b - 1)
+    logvar = torch.log(diacov)
 
-        # print(diacov, LogDetDiag.apply(diacov))
+    kl = -0.5 * torch.sum(1 + logvar - mean.pow(2) - logvar.exp())
 
-        t1 = - LogDetDiag.apply(diacov) - d
-
-    t3 = torch.dot(mean.squeeze(), mean.squeeze())
-
+    # t3 = torch.dot(mean.squeeze(), mean.squeeze())
     # print('kl', t1, t2, t3)
 
-    return 0.5 * (t1 + t2 + t3)
+    return kl/b
 
 
 def go(options):
@@ -224,10 +231,10 @@ def go(options):
     w = SummaryWriter()
 
     # for modelname in ['relu', 'sigmoid', 'relu-lambda', 'sigmoid-lambda', 'relu-sigloss', 'sigmoid-sigloss', 'bn-relu', 'relu-bn', 'sigmoid-bn']:
-    for modelname in ['sigmoid', 'sigmoid-bn', 'sigmoid-lambda']:
+    for modelname in ['sigmoid-lambda', 'sigmoid', 'sigmoid-bn', ]:
 
         print('testing model ', modelname)
-        model = load_model(modelname, size=SIZE)
+        model = load_model(modelname, size=SIZE, hidden=4, mult=1.0)
         print(util.count_params(model), ' parameters')
 
         if CUDA:
