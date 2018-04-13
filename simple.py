@@ -136,8 +136,8 @@ def load_model(name, size=16, hidden=32, mult=0.0001):
         activation(32),
         Linear(hidden, hidden),
         activation(32),
-        Linear(hidden, hidden),
-        activation(32),
+        # Linear(hidden, hidden),
+        # activation(32),
         Linear(hidden, size),
     )
 
@@ -162,7 +162,7 @@ def loss_terms(model, input):
     for i, module in enumerate(list(model.modules())[1:]):
         hidden = module(hidden)
 
-        if i == 7:
+        if i in [1, 3, 5, 7, 9]:
             ll = layer_loss(hidden)
             losses.append(ll)
 
