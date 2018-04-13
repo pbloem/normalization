@@ -234,7 +234,7 @@ def go(options):
     for modelname in ['sigmoid-lambda', 'sigmoid', 'sigmoid-bn', ]:
 
         print('testing model ', modelname)
-        model = load_model(modelname, size=SIZE, hidden=4, mult=1.0)
+        model = load_model(modelname, size=SIZE, mult=1.0)
         print(util.count_params(model), ' parameters')
 
         if CUDA:
