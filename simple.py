@@ -128,16 +128,16 @@ def load_model(name, size=16, hidden=32, mult=0.0001):
         activation(32),
         Linear(hidden, hidden),
         activation(32),
-        Linear(hidden, hidden),
-        activation(32),
-        Linear(hidden, hidden),
-        activation(32),
-        Linear(hidden, hidden),
-        activation(32),
-        Linear(hidden, hidden),
-        activation(32),
-        Linear(hidden, hidden),
-        activation(32),
+        # Linear(hidden, hidden),
+        # activation(32),
+        # Linear(hidden, hidden),
+        # activation(32),
+        # Linear(hidden, hidden),
+        # activation(32),
+        # Linear(hidden, hidden),
+        # activation(32),
+        # Linear(hidden, hidden),
+        # activation(32),
         Linear(hidden, size),
     )
 
@@ -152,10 +152,17 @@ def loss_terms(model, input):
     losses = []
 
     hidden = input
+    # for i, module in enumerate(list(model.modules())[1:]):
+    #     hidden = module(hidden)
+    #
+    #     if isinstance(module, nn.ReLU) or isinstance(module, nn.Sigmoid):
+    #         ll = layer_loss(hidden)
+    #         losses.append(ll)
+
     for i, module in enumerate(list(model.modules())[1:]):
         hidden = module(hidden)
 
-        if isinstance(module, nn.ReLU) or isinstance(module, nn.Sigmoid):
+        if i == 3:
             ll = layer_loss(hidden)
             losses.append(ll)
 
