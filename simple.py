@@ -128,16 +128,16 @@ def load_model(name, size=16, hidden=32, mult=0.0001):
         # activation(32),
         # Linear(hidden, hidden),
         # activation(32),
-        # Linear(hidden, hidden),
-        # activation(32),
-        # Linear(hidden, hidden),
-        # activation(32),
-        # Linear(hidden, hidden),
-        # activation(32),
-        # Linear(hidden, hidden),
-        # activation(32),
-        # Linear(hidden, hidden),
-        # activation(32),
+        Linear(hidden, hidden),
+        activation(32),
+        Linear(hidden, hidden),
+        activation(32),
+        Linear(hidden, hidden),
+        activation(32),
+        Linear(hidden, hidden),
+        activation(32),
+        Linear(hidden, hidden),
+        activation(32),
         Linear(hidden, size),
     )
 
@@ -162,7 +162,7 @@ def loss_terms(model, input):
     for i, module in enumerate(list(model.modules())[1:]):
         hidden = module(hidden)
 
-        if i == 1:
+        if i == 7:
             ll = layer_loss(hidden)
             losses.append(ll)
 
@@ -234,7 +234,7 @@ def go(options):
     for modelname in ['sigmoid-lambda', 'sigmoid', 'sigmoid-bn', ]:
 
         print('testing model ', modelname)
-        model = load_model(modelname, size=SIZE, mult=1.0)
+        model = load_model(modelname, size=SIZE, mult=0.0000001)
         print(util.count_params(model), ' parameters')
 
         if CUDA:
