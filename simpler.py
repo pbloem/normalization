@@ -92,9 +92,9 @@ def go(options):
 
     for i in tqdm.trange(ITS):
         optimizer.zero_grad()
-        x = torch.randn(PLOTN, SIZE)
+        x = torch.randn(BATCH, SIZE)
 
-        if(CUDA):
+        if CUDA:
             x = x.cuda()
 
         x = Variable(x)
@@ -111,8 +111,12 @@ def go(options):
 
     ## Plot
 
-    x = Variable(torch.randn(PLOTN, SIZE))
+    x = torch.randn(PLOTN, SIZE)
 
+    if CUDA:
+        x = x.cuda()
+
+    x = Variable(x)
 
     # y = x.data.numpy()
     y = model(x).data.cpu().numpy()
