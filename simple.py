@@ -49,6 +49,23 @@ class Sigmoid(nn.Module):
     def forward(self, x):
         return self.sigmoid(x)
 
+class Nne(nn.Module):
+
+    def __init__(self, num_features):
+        super(Nne, self).__init__()
+
+    def forward(self, x):
+        return x
+
+class BN(nn.Module):
+
+    def __init__(self, num_features):
+        super(BN, self).__init__()
+        self.norm = nn.BatchNorm1d(num_features)
+
+    def forward(self, x):
+        return self.norm(x)
+
 class BNRelu(nn.Module):
 
     def __init__(self, num_features):
@@ -96,6 +113,12 @@ def load_model(name, size=16, hidden=32, mult=0.0001):
 
     if name == 'relu':
         activation = Relu
+    elif name == 'linear':
+        activation = Nne
+    elif name == 'linear-lambda':
+        activation = Nne
+    elif name == 'linear-bn':
+        activation = BN
     elif name == 'sigmoid':
         activation = Sigmoid
     elif name == 'relu-lambda':
@@ -231,10 +254,10 @@ def go(options):
     w = SummaryWriter()
 
     # for modelname in ['relu', 'sigmoid', 'relu-lambda', 'sigmoid-lambda', 'relu-sigloss', 'sigmoid-sigloss', 'bn-relu', 'relu-bn', 'sigmoid-bn']:
-    for modelname in ['sigmoid-lambda', 'sigmoid', 'sigmoid-bn', ]:
+    for modelname in ['linear', 'linear-lambda', 'linear-bn']:
 
         print('testing model ', modelname)
-        model = load_model(modelname, size=SIZE, mult=0.0000001)
+        model = load_model(modelname, size=SIZE, mult=options.mult)
         print(util.count_params(model), ' parameters')
 
         if CUDA:
@@ -439,6 +462,11 @@ if __name__ == "__main__":
                         dest="learning_rate",
                         help="The learning rate",
                         default=0.0001, type=float)
+
+    parser.add_argument("-m", "--mult",
+                        dest="mult",
+                        help="Weight multiplier",
+                        default=1.0, type=float)
 
     options = parser.parse_args()
 
