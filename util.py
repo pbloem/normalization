@@ -459,3 +459,17 @@ class DetCuda(torch.autograd.Function):
         return grad_input
 
 
+def kldiv(mean, logvar):
+    """
+    Computes the kl divergences between the standard MVN and a batch of given mvns
+
+    Uses base e.
+
+    :param mean:
+    :param logvar: natural logarithms of per-dimension variance
+    :return:
+    """
+
+    kl = -0.5 * torch.sum(1 + logvar - mean.pow(2) - logvar.exp())
+
+

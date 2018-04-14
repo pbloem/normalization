@@ -142,7 +142,11 @@ def load_model(name, size=16, hidden=32, mult=0.0001):
 
     model = Sequential(
         Linear(size, hidden),
-        activation(32),
+        activation(hidden),
+        Linear(hidden, hidden),
+        activation(hidden),
+        Linear(hidden, hidden),
+        activation(hidden),
         # Linear(hidden, hidden),
         # activation(32),
         # Linear(hidden, hidden),
@@ -151,14 +155,10 @@ def load_model(name, size=16, hidden=32, mult=0.0001):
         # activation(32),
         # Linear(hidden, hidden),
         # activation(32),
-        Linear(hidden, hidden),
-        activation(32),
-        Linear(hidden, hidden),
-        activation(32),
-        Linear(hidden, hidden),
-        activation(32),
-        Linear(hidden, hidden),
-        activation(32),
+        # Linear(hidden, hidden),
+        # activation(32),
+        # Linear(hidden, hidden),
+        # activation(32),
         # Linear(hidden, hidden),
         # activation(32),
         Linear(hidden, size),
@@ -185,58 +185,24 @@ def loss_terms(model, input):
     for i, module in enumerate(list(model.modules())[1:]):
         hidden = module(hidden)
 
-        if i in [1, 3, 5, 7, 9]:
+        if i in [1, 3, 5]:
             ll = layer_loss(hidden)
             losses.append(ll)
 
     return losses
 
 def layer_loss(hidden):
-
-    b = hidden.size()[0]
-    hidden = hidden.view(b, -1)
-
     b, d = hidden.size()
 
     mean = hidden.mean(dim=0, keepdim=True)
 
-    # print(hidden)
-    # print('m', mean.data)
+    diacov = torch.bmm(hidden.view(d, 1, b), hidden.view(d, b, 1)).squeeze() / (b - 1)
 
-    t2 = torch.dot(hidden.view(-1), hidden.view(-1)) * 1.0 / (b - 1)
-
-    if False:
-        # if we have more samples than dimensions, we can compute the full sample covariance ...
-
-        diffs = hidden - mean
-        cov = torch.mm(diffs.view(d, b), diffs.view(b, d))
-        cov = cov * 1.0/(b-1)
-
-        det = DetCuda if mean.is_cuda else Det
-
-        t1 = - torch.log(det.apply(cov)) - d
-
-   #  else:
-        # ... otherwise, we use a diagonal approximation for the determinant of the
-        # covariance matrix (note that the rest of the KL divergence can be efficiently and exactly computed).
-
-        # diacov = torch.bmm(hidden.view(d, 1, b), hidden.view(d, b, 1)).squeeze() * 1.0/(b-1)
-        #
-        # assert( diacov.size() == (d,) )
-        #
-        # # print(diacov, LogDetDiag.apply(diacov))
-        #
-        # t1 = - LogDetDiag.apply(diacov) - d
-
-    diacov = torch.bmm(hidden.view(d, 1, b), hidden.view(d, b, 1)).squeeze() * 1.0 / (b - 1)
     logvar = torch.log(diacov)
 
     kl = -0.5 * torch.sum(1 + logvar - mean.pow(2) - logvar.exp())
 
-    # t3 = torch.dot(mean.squeeze(), mean.squeeze())
-    # print('kl', t1, t2, t3)
-
-    return kl/b
+    return kl
 
 
 def go(options):
@@ -254,7 +220,7 @@ def go(options):
     w = SummaryWriter()
 
     # for modelname in ['relu', 'sigmoid', 'relu-lambda', 'sigmoid-lambda', 'relu-sigloss', 'sigmoid-sigloss', 'bn-relu', 'relu-bn', 'sigmoid-bn']:
-    for modelname in ['linear', 'linear-lambda', 'linear-bn']:
+    for modelname in ['sigmoid-lambda','sigmoid']: #, 'sigmoid', 'sigmoid-lambda', 'sigmoid-lambda', 'sigmoid-lambda']: #, 'linear-bn']:
 
         print('testing model ', modelname)
         model = load_model(modelname, size=SIZE, mult=options.mult)
@@ -286,6 +252,8 @@ def go(options):
 
                 if 'lambda' in modelname:
                     lloss = sum(loss_terms(model, x))
+
+                    # print(loss.data[0], lloss.data[0])
                     loss = loss + options.lambd * lloss
 
                 if 'sigloss' in modelname:
@@ -313,13 +281,14 @@ def go(options):
 
                 y = model(x)
                 loss = criterion(y, x)
+                # print(loss.data[0] / BATCH_SIZE )
 
                 sm += float(loss.data[0])
 
                 # if i > 2:
                 #     break
 
-            accuracies.append(sm / TEST_SIZE)
+            accuracies.append(sm / (TEST_SIZE * BATCH_SIZE))
 
         # accuracies = np.asarray(accuracies)
         plt.plot(accuracies, label=modelname, marker = next(marker))
