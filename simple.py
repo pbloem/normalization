@@ -7,16 +7,6 @@ import torch.nn.functional as F
 
 import torch.optim as optim
 
-import torchvision
-import torchvision.transforms as transforms
-
-import torchsample as ts
-from torchsample.modules import ModuleTrainer
-
-from torchsample.metrics import *
-
-from tensorboardX import SummaryWriter
-
 from argparse import ArgumentParser
 
 import numpy as np
@@ -26,7 +16,7 @@ mpl.use('Agg')
 import matplotlib.pyplot as plt
 
 
-import time, tqdm, util, pickle
+import time, tqdm, util, pickle, math
 
 from util import Det, DetCuda, LogDetDiag
 import itertools
@@ -107,7 +97,7 @@ class SigmoidBN(nn.Sequential):
     def forward(self, x):
         return self.norm(self.sigmoid(x))
 
-def load_model(name, size=16, hidden=32, mult=0.0001):
+def load_model(name, size=4, hidden=32, mult=0.0001):
 
     activation = None
 
@@ -147,27 +137,29 @@ def load_model(name, size=16, hidden=32, mult=0.0001):
         activation(hidden),
         Linear(hidden, hidden),
         activation(hidden),
-        # Linear(hidden, hidden),
-        # activation(32),
-        # Linear(hidden, hidden),
-        # activation(32),
-        # Linear(hidden, hidden),
-        # activation(32),
-        # Linear(hidden, hidden),
-        # activation(32),
-        # Linear(hidden, hidden),
-        # activation(32),
-        # Linear(hidden, hidden),
-        # activation(32),
-        # Linear(hidden, hidden),
-        # activation(32),
+        Linear(hidden, hidden),
+        activation(hidden),
+        Linear(hidden, hidden),
+        activation(hidden),
+        Linear(hidden, hidden),
+        activation(hidden),
+        Linear(hidden, hidden),
+        activation(hidden),
+        Linear(hidden, hidden),
+        activation(hidden),
+        Linear(hidden, hidden),
+        activation(hidden),
+        Linear(hidden, hidden),
+        activation(hidden),
         Linear(hidden, size),
     )
 
     # shrink the weights to induc e vanishing gradient
-    for layer in model.modules():
+    for layer in list(model.modules())[:10]:
         if isinstance(layer, Linear):
-            layer.weight.data *= mult
+            size = layer.weight.size()
+            torch.rand(size, out=layer.weight.data)
+            layer.weight.data *= - mult
 
     return model
 
@@ -185,7 +177,7 @@ def loss_terms(model, input):
     for i, module in enumerate(list(model.modules())[1:]):
         hidden = module(hidden)
 
-        if i in [1, 3, 5]:
+        if i in [1, 3, 5, 7, 9, 11]:
             ll = layer_loss(hidden)
             losses.append(ll)
 
@@ -196,6 +188,8 @@ def layer_loss(hidden):
 
     mean = hidden.mean(dim=0, keepdim=True)
 
+    hidden = hidden - mean
+
     diacov = torch.bmm(hidden.view(d, 1, b), hidden.view(d, b, 1)).squeeze() / (b - 1)
 
     logvar = torch.log(diacov)
@@ -204,6 +198,28 @@ def layer_loss(hidden):
 
     return kl
 
+def full_loss(hidden):
+
+    b, d = hidden.size()
+
+    mean = hidden.mean(dim=0, keepdim=True)
+
+    diffs = hidden - mean
+
+    cov = torch.mm(diffs.transpose(0, 1), diffs)
+    cov = cov / (b - 1)
+
+    t1 = torch.trace(cov)
+    t2 = torch.dot(mean.squeeze(), mean.squeeze())
+
+
+    if True:
+        t3 = - torch.log( torch.potrf(cov).diag().prod()**2 )
+    else:
+        diacov = torch.bmm(diffs.view(d, 1, b), diffs.view(d, b, 1)).squeeze() / (b - 1)
+        t3 = torch.log(diacov).sum()
+
+    return 0.5 * (t1 + t2 + t3 + math.e - d)
 
 def go(options):
 
@@ -217,10 +233,8 @@ def go(options):
 
     CUDA = options.cuda
 
-    w = SummaryWriter()
-
     # for modelname in ['relu', 'sigmoid', 'relu-lambda', 'sigmoid-lambda', 'relu-sigloss', 'sigmoid-sigloss', 'bn-relu', 'relu-bn', 'sigmoid-bn']:
-    for modelname in ['sigmoid-lambda','sigmoid']: #, 'sigmoid', 'sigmoid-lambda', 'sigmoid-lambda', 'sigmoid-lambda']: #, 'linear-bn']:
+    for modelname in ['relu-lambda', 'relu', 'relu-bn']: #, 'linear-bn']:
 
         print('testing model ', modelname)
         model = load_model(modelname, size=SIZE, mult=options.mult)

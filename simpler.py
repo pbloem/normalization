@@ -7,16 +7,6 @@ import torch.nn.functional as F
 
 import torch.optim as optim
 
-import torchvision
-import torchvision.transforms as transforms
-
-import torchsample as ts
-from torchsample.modules import ModuleTrainer
-
-from torchsample.metrics import *
-
-from tensorboardX import SummaryWriter
-
 from argparse import ArgumentParser
 
 import numpy as np
@@ -26,16 +16,15 @@ mpl.use('Agg')
 import matplotlib.pyplot as plt
 
 
-import time, tqdm, util, pickle
-
-from util import Det, DetCuda, LogDetDiag
-import itertools
+import time, tqdm, util, pickle, math
 
 
 def loss_function(out):
     b, d = out.size()
 
     mean = out.mean(dim=0, keepdim=True)
+
+    out = out - mean
 
     diacov = torch.bmm(out.view(d, 1, b), out.view(d, b, 1)).squeeze() / (b - 1)
 
@@ -44,6 +33,24 @@ def loss_function(out):
     kl = -0.5 * torch.sum(1 + logvar - mean.pow(2) - logvar.exp())
 
     return kl
+
+def full_loss(out):
+
+    b, d = out.size()
+
+    mean = out.mean(dim=0, keepdim=True)
+
+    diffs = out - mean
+
+    cov = torch.mm(diffs.transpose(0, 1), diffs)
+    cov = cov / (b - 1)
+
+    t1 = torch.trace(cov)
+    t2 = torch.dot(mean.squeeze(), mean.squeeze())
+
+    t3 = - torch.log( torch.potrf(cov).diag().prod()**2 )
+
+    return 0.5 * (t1 + t2 + t3 + math.e - d)
 
 def go(options):
 
@@ -80,7 +87,7 @@ def go(options):
         nn.ReLU(),
         nn.Linear(HIDDEN, HIDDEN),
         nn.ReLU(),
-        nn.Linear(HIDDEN, SIZE),
+        nn.Linear(HIDDEN, 2),
     )
 
     if(CUDA):
@@ -101,7 +108,7 @@ def go(options):
 
         y = model(x)
 
-        loss = loss_function(y)
+        loss = full_loss(y)
 
         loss.backward()
         optimizer.step()
@@ -144,7 +151,7 @@ if __name__ == "__main__":
     parser.add_argument("-H", "--hidden",
                         dest="hidden",
                         help="The number of hidden units.",
-                        default=128, type=int)
+                        default=6, type=int)
 
     parser.add_argument("-p", "--plot-n",
                         dest="plotn",

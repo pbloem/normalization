@@ -394,7 +394,7 @@ class Det(torch.autograd.Function):
     @staticmethod
     def forward(ctx, x):
         output = torch.potrf(x).diag().prod()**2
-        output = torch.Tensor([output]).cuda() # remove .cuda() if you only use cpu
+        output = torch.Tensor([output]) # remove .cuda() if you only use cpu
         ctx.save_for_backward(x, output)
         return output
 
@@ -444,7 +444,7 @@ class DetCuda(torch.autograd.Function):
     @staticmethod
     def forward(ctx, x):
         output = torch.potrf(x).diag().prod()**2
-        output = torch.Tensor([output])
+        output = torch.Tensor([output]).cuda()
         ctx.save_for_backward(x, output)
         return output
 

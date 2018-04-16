@@ -10,13 +10,6 @@ import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
 
-import torchsample as ts
-from torchsample.modules import ModuleTrainer
-
-from torchsample.metrics import *
-
-from tensorboardX import SummaryWriter
-
 from argparse import ArgumentParser
 
 import numpy as np
@@ -182,52 +175,30 @@ def loss_terms(model, input):
     for i, module in enumerate(list(model.modules())[1:]):
         hidden = module(hidden)
 
-        if isinstance(module, nn.ReLU) or isinstance(module, nn.Sigmoid):
+        # if isinstance(module, nn.ReLU) or isinstance(module, nn.Sigmoid):
+        if isinstance(module, nn.Conv2d):
             ll = layer_loss(hidden)
             losses.append(ll)
 
     return losses
 
+
 def layer_loss(hidden):
-
-    b = hidden.size()[0]
+    b, _ = hidden.size()
     hidden = hidden.view(b, -1)
-
     b, d = hidden.size()
 
     mean = hidden.mean(dim=0, keepdim=True)
 
-    t2 = torch.dot(hidden.view(-1), hidden.view(-1)) * 1.0 / (b - 1)
+    hidden = hidden - mean
 
-    if False:
-        # if we have more samples than dimensions, we can compute the full sample covariance ...
+    diacov = torch.bmm(hidden.view(d, 1, b), hidden.view(d, b, 1)).squeeze() / (b - 1)
 
-        diffs = hidden - mean
-        cov = torch.mm(diffs.view(d, b), diffs.view(b, d))
-        cov = cov * 1.0/(b-1)
+    logvar = torch.log(diacov)
 
-        det = DetCuda if mean.is_cuda else Det
+    kl = -0.5 * torch.sum(1 + logvar - mean.pow(2) - logvar.exp())
 
-        t1 = - torch.log(det.apply(cov)) - d
-
-    else:
-        # ... otherwise, we use a diagonal approximation for the determinant of the
-        # covariance matrix (note that the rest of the KL divergence can be efficiently and exactly computed).
-
-        diacov = torch.bmm(hidden.view(d, 1, b), hidden.view(d, b, 1)).squeeze() * 1.0/(b-1)
-
-        assert( diacov.size() == (d,) )
-
-        # print(diacov, LogDetDiag.apply(diacov))
-
-        t1 = - LogDetDiag.apply(diacov) - d
-
-    t3 = torch.dot(mean.squeeze(), mean.squeeze())
-
-    # print('kl', t1, t2, t3)
-
-    return 0.5 * (t1 + t2 + t3)
-
+    return kl
 
 def go(options):
 
@@ -236,8 +207,6 @@ def go(options):
     EPOCHS = options.epochs
     BATCH_SIZE = options.batch_size
     CUDA = options.cuda
-
-    w = SummaryWriter()
 
     # Set up the dataset
 
